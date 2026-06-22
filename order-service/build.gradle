@@ -1,0 +1,10 @@
+dependencies {
+    // 공통 응답 포맷(ApiResponse) 등을 사용하기 위해 common-module 연동
+    implementation project(':common-module')
+    
+    // REST API 구축을 위한 Spring Web
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    
+    // Kafka 프로듀서(메시지 발행) 기능을 사용하기 위한 Spring Kafka
+    implementation 'org.springframework.kafka:spring-kafka'
+}

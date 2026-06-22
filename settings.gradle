@@ -1,0 +1,6 @@
+rootProject.name = 'delivery-platform'
+
+include 'common-module'
+include 'order-service'
+include 'weather-agent'
+include 'notification-service'
