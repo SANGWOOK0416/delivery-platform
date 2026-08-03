@@ -1,8 +1,7 @@
-// 실제 구동되는 서버가 아니므로 실행 가능한 jar 파일 생성을 비활성화
-bootJar { enabled = false }
-jar { enabled = true }
+bootJar {
+    enabled = false
+}
 
-dependencies {
-    // 공통 DTO나 예외 처리에 사용할 웹 어노테이션용 의존성
-    implementation 'org.springframework.boot:spring-boot-starter-web'
+jar {
+    enabled = true
 }
