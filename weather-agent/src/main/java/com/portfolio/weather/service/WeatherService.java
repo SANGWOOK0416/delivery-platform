@@ -2,22 +2,44 @@ package com.portfolio.weather.service;
 
 import com.portfolio.common.event.DeliveryRiskEvent;
 import com.portfolio.common.event.OrderCreatedEvent;
+import com.portfolio.weather.client.GeocodingException;
+import com.portfolio.weather.client.KakaoGeocodingClient;
+import com.portfolio.weather.client.KakaoGeocodingClient.GeoCoordinate;
+import com.portfolio.weather.client.KmaGridConverter;
 import com.portfolio.weather.client.KmaWeatherClient;
+import com.portfolio.weather.config.KmaApiProperties;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class WeatherService {
 
+    private final KakaoGeocodingClient kakaoGeocodingClient;
+    private final KmaGridConverter kmaGridConverter;
     private final KmaWeatherClient kmaWeatherClient;
+    private final KmaApiProperties kmaApiProperties;
 
     public DeliveryRiskEvent analyzeDeliveryRisk(OrderCreatedEvent orderEvent) {
-        int precipitationType = kmaWeatherClient.fetchCurrentPrecipitationType();
+        KmaApiProperties.Grid grid = resolveGrid(orderEvent.address());
+        int precipitationType = kmaWeatherClient.fetchCurrentPrecipitationType(grid.nx(), grid.ny());
         return new DeliveryRiskEvent(
                 orderEvent.orderId(),
                 orderEvent.address(),
                 precipitationType
         );
+    }
+
+    private KmaApiProperties.Grid resolveGrid(String address) {
+        try {
+            GeoCoordinate coordinate = kakaoGeocodingClient.geocode(address);
+            return kmaGridConverter.toGrid(coordinate.latitude(), coordinate.longitude());
+        } catch (GeocodingException exception) {
+            log.warn("Failed to geocode delivery address; falling back to default grid coordinate. address={}, reason={}",
+                    address, exception.getMessage());
+            return kmaApiProperties.grid();
+        }
     }
 }

@@ -11,9 +11,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Looks up the current precipitation type (PTY) from the KMA 초단기실황(getUltraSrtNcst) API.
- * The grid coordinate is a fixed reference point for now — the order's delivery address is
- * not yet geocoded to an nx/ny grid cell, so every lookup reflects weather at that one point.
+ * Looks up the current precipitation type (PTY) from the KMA 초단기실황(getUltraSrtNcst) API
+ * for a given forecast grid cell.
  */
 @Slf4j
 @Component
@@ -30,14 +29,14 @@ public class KmaWeatherClient {
     private final RestTemplate restTemplate;
     private final KmaApiProperties kmaApiProperties;
 
-    public int fetchCurrentPrecipitationType() {
+    public int fetchCurrentPrecipitationType(int nx, int ny) {
         if (!kmaApiProperties.hasServiceKey()) {
             log.warn("KMA_SERVICE_KEY is not configured; skipping live weather lookup.");
             return NO_PRECIPITATION;
         }
 
         try {
-            KmaUltraSrtNcstResponse response = requestUltraSrtNcst();
+            KmaUltraSrtNcstResponse response = requestUltraSrtNcst(nx, ny);
             return extractPrecipitationType(response);
         } catch (Exception exception) {
             // A flaky external API must never block order processing — fall back safely and move on.
@@ -46,7 +45,7 @@ public class KmaWeatherClient {
         }
     }
 
-    private KmaUltraSrtNcstResponse requestUltraSrtNcst() {
+    private KmaUltraSrtNcstResponse requestUltraSrtNcst(int nx, int ny) {
         LocalDateTime baseDateTime = resolveBaseDateTime(LocalDateTime.now());
 
         URI uri = UriComponentsBuilder.fromHttpUrl(kmaApiProperties.baseUrl())
@@ -57,8 +56,8 @@ public class KmaWeatherClient {
                 .queryParam("dataType", "JSON")
                 .queryParam("base_date", baseDateTime.format(BASE_DATE_FORMAT))
                 .queryParam("base_time", baseDateTime.format(BASE_TIME_FORMAT))
-                .queryParam("nx", kmaApiProperties.grid().nx())
-                .queryParam("ny", kmaApiProperties.grid().ny())
+                .queryParam("nx", nx)
+                .queryParam("ny", ny)
                 .build()
                 .encode()
                 .toUri();

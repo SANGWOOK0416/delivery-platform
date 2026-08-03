@@ -1,6 +1,10 @@
 server:
   port: 8082
 
+logging:
+  charset:
+    console: UTF-8
+
 spring:
   application:
     name: weather-agent
@@ -24,3 +28,8 @@ kma:
     grid:
       nx: ${KMA_GRID_NX:60}
       ny: ${KMA_GRID_NY:127}
+
+kakao:
+  local:
+    rest-api-key: ${KAKAO_REST_API_KEY:}
+    base-url: ${KAKAO_LOCAL_BASE_URL:https://dapi.kakao.com}

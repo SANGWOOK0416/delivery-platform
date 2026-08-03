@@ -29,7 +29,7 @@ class KmaWeatherClientTest {
         KmaApiProperties blankKeyProperties = new KmaApiProperties("", properties.baseUrl(), properties.grid());
         KmaWeatherClient blankKeyClient = new KmaWeatherClient(restTemplate, blankKeyProperties);
 
-        int precipitationType = blankKeyClient.fetchCurrentPrecipitationType();
+        int precipitationType = blankKeyClient.fetchCurrentPrecipitationType(60, 127);
 
         assertThat(precipitationType).isZero();
         verify(restTemplate, never()).getForObject(any(URI.class), any());
@@ -40,7 +40,7 @@ class KmaWeatherClientTest {
         when(restTemplate.getForObject(any(URI.class), Mockito.eq(KmaUltraSrtNcstResponse.class)))
                 .thenReturn(successResponseWithPty("1"));
 
-        int precipitationType = client.fetchCurrentPrecipitationType();
+        int precipitationType = client.fetchCurrentPrecipitationType(60, 127);
 
         assertThat(precipitationType).isEqualTo(1);
     }
@@ -50,7 +50,7 @@ class KmaWeatherClientTest {
         when(restTemplate.getForObject(any(URI.class), Mockito.eq(KmaUltraSrtNcstResponse.class)))
                 .thenThrow(new RestClientException("network error"));
 
-        int precipitationType = client.fetchCurrentPrecipitationType();
+        int precipitationType = client.fetchCurrentPrecipitationType(60, 127);
 
         assertThat(precipitationType).isZero();
     }
@@ -63,7 +63,7 @@ class KmaWeatherClientTest {
                         null
                 )));
 
-        int precipitationType = client.fetchCurrentPrecipitationType();
+        int precipitationType = client.fetchCurrentPrecipitationType(60, 127);
 
         assertThat(precipitationType).isZero();
     }
