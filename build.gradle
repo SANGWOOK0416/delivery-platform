@@ -4,39 +4,44 @@ plugins {
     id 'io.spring.dependency-management' version '1.1.5'
 }
 
-// 최상위 우산 프로젝트는 실제 코드가 없으므로 빌드 결과물(jar)을 생성하지 않도록 설정
-bootJar { enabled = false }
-jar { enabled = false }
+bootJar {
+    enabled = false
+}
 
-// 모든 하위 모듈(subprojects)에 공통으로 적용할 설정
+jar {
+    enabled = false
+}
+
 subprojects {
     group = 'com.portfolio'
     version = '0.0.1-SNAPSHOT'
-    
+
     apply plugin: 'java'
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
 
     java {
-        sourceCompatibility = '17' // 현업 표준인 Java 17을 사용합니다.
+        sourceCompatibility = JavaVersion.VERSION_17
     }
 
     repositories {
         mavenCentral()
     }
 
-    // 모든 마이크로서비스가 공통으로 사용할 필수 라이브러리들
     dependencies {
-        // 코드를 깔끔하게 만들어주는 Lombok
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
+        testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
-        
-        // 테스트를 위한 기본 라이브러리
         testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
     }
 
-    test {
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    tasks.withType(Test).configureEach {
         useJUnitPlatform()
     }
 }

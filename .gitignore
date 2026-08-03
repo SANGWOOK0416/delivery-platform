@@ -1,6 +1,8 @@
 HELP.md
 .gradle
 build/
+*.hprof
+.env
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
