@@ -1,7 +1,5 @@
 dependencies {
     implementation project(':common-module')
     implementation 'org.springframework.boot:spring-boot-starter-web'
-    
-    // Kafka 컨슈머(메시지 수신) 기능을 위한 의존성 추가
     implementation 'org.springframework.kafka:spring-kafka'
 }
