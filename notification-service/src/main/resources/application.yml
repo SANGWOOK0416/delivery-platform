@@ -16,5 +16,5 @@ spring:
 
 kakao:
   api:
-    token: ${KAKAO_API_TOKEN}
+    token: ${KAKAO_API_TOKEN:}
     web-url: ${KAKAO_WEB_URL:https://example.com}
