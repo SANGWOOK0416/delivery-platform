@@ -4,11 +4,8 @@ server:
 spring:
   application:
     name: order-service
-  
-  # Kafka 설정 추가
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
-      # 데이터를 전송할 때 직렬화(Serialize) 방식 설정
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer

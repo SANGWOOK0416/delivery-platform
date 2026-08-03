@@ -1,11 +1,11 @@
 package com.portfolio.order.dto;
 
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
-@Getter
-@NoArgsConstructor
-public class OrderRequest {
-    private Long customerId;
-    private String address;
+public record OrderRequest(
+        @NotNull Long customerId,
+        @NotBlank @Size(max = 255) String address
+) {
 }

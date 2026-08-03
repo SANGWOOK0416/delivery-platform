@@ -1,11 +1,18 @@
 package com.portfolio.order.controller;
 
+import com.portfolio.common.event.OrderCreatedEvent;
 import com.portfolio.common.response.ApiResponse;
+import com.portfolio.order.dto.OrderAcceptedResponse;
 import com.portfolio.order.dto.OrderRequest;
-import com.portfolio.order.dto.OrderEvent;
 import com.portfolio.order.producer.OrderProducer;
+import com.portfolio.order.service.OrderIdGenerator;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -13,22 +20,18 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderProducer orderProducer;
+    private final OrderIdGenerator orderIdGenerator;
 
     @PostMapping
-    public ApiResponse<String> createOrder(@RequestBody OrderRequest request) {
-        Long mockOrderId = 1004L;
+    public ResponseEntity<ApiResponse<OrderAcceptedResponse>> createOrder(
+            @Valid @RequestBody OrderRequest request
+    ) {
+        Long orderId = orderIdGenerator.nextId();
+        OrderCreatedEvent event = new OrderCreatedEvent(orderId, request.customerId(), request.address());
 
-        // 1. 카프카 전송용 이벤트 객체 생성
-        OrderEvent orderEvent = new OrderEvent(
-            mockOrderId,
-            request.getCustomerId(),
-            request.getAddress()
-        );
+        orderProducer.sendOrderCreatedEvent(event);
 
-        // 2. 카프카로 이벤트 발행 (대기 시간 없음)
-        orderProducer.sendOrderEvent(orderEvent);
-
-        // 3. 시스템 연동을 위해 클라이언트에게 즉시 성공 응답 반환
-        return ApiResponse.success("주문 접수가 완료되었습니다. 배달 위험도 분석 및 알림 전송이 비동기로 처리됩니다.");
+        return ResponseEntity.accepted()
+                .body(ApiResponse.accepted(new OrderAcceptedResponse(orderId)));
     }
 }
