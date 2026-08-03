@@ -2,19 +2,22 @@ package com.portfolio.weather.service;
 
 import com.portfolio.common.event.DeliveryRiskEvent;
 import com.portfolio.common.event.OrderCreatedEvent;
+import com.portfolio.weather.client.KmaWeatherClient;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 @Service
+@RequiredArgsConstructor
 public class WeatherService {
 
-    private static final int NO_PRECIPITATION = 0;
+    private final KmaWeatherClient kmaWeatherClient;
 
     public DeliveryRiskEvent analyzeDeliveryRisk(OrderCreatedEvent orderEvent) {
-        // The KMA client will replace this safe fallback when live weather lookup is introduced.
+        int precipitationType = kmaWeatherClient.fetchCurrentPrecipitationType();
         return new DeliveryRiskEvent(
                 orderEvent.orderId(),
                 orderEvent.address(),
-                NO_PRECIPITATION
+                precipitationType
         );
     }
 }

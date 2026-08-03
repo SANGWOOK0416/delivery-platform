@@ -16,3 +16,11 @@ spring:
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+kma:
+  api:
+    service-key: ${KMA_SERVICE_KEY:}
+    base-url: ${KMA_BASE_URL:https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0}
+    grid:
+      nx: ${KMA_GRID_NX:60}
+      ny: ${KMA_GRID_NY:127}
