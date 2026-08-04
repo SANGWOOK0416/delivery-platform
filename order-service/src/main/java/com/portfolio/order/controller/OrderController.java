@@ -1,11 +1,9 @@
 package com.portfolio.order.controller;
 
-import com.portfolio.common.event.OrderCreatedEvent;
 import com.portfolio.common.response.ApiResponse;
 import com.portfolio.order.dto.OrderAcceptedResponse;
 import com.portfolio.order.dto.OrderRequest;
-import com.portfolio.order.producer.OrderProducer;
-import com.portfolio.order.service.OrderIdGenerator;
+import com.portfolio.order.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,17 +17,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class OrderController {
 
-    private final OrderProducer orderProducer;
-    private final OrderIdGenerator orderIdGenerator;
+    private final OrderService orderService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<OrderAcceptedResponse>> createOrder(
             @Valid @RequestBody OrderRequest request
     ) {
-        Long orderId = orderIdGenerator.nextId();
-        OrderCreatedEvent event = new OrderCreatedEvent(orderId, request.customerId(), request.address());
-
-        orderProducer.sendOrderCreatedEvent(event);
+        Long orderId = orderService.createOrder(request);
 
         return ResponseEntity.accepted()
                 .body(ApiResponse.accepted(new OrderAcceptedResponse(orderId)));
