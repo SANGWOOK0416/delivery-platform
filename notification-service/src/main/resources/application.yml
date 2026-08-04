@@ -1,6 +1,9 @@
 server:
   port: 8083
 
+frontend:
+  origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+
 spring:
   application:
     name: notification-service

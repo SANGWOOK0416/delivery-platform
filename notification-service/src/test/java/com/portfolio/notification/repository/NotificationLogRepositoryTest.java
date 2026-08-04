@@ -40,4 +40,21 @@ class NotificationLogRepositoryTest {
         assertThat(forThisOrder).extracting(NotificationLogEntity::getStatus)
                 .containsExactlyInAnyOrder(NotificationStatus.FAILED, NotificationStatus.SENT);
     }
+
+    @Test
+    void findLatestPerOrderReturnsOnlyTheMostRecentAttempt() {
+        Instant earlier = Instant.now().minusSeconds(60);
+        Instant later = Instant.now();
+        notificationLogRepository.saveAndFlush(new NotificationLogEntity(
+                null, 3002L, "Seoul", 1, NotificationStatus.FAILED, "401 Unauthorized", earlier));
+        notificationLogRepository.saveAndFlush(new NotificationLogEntity(
+                null, 3002L, "Seoul", 1, NotificationStatus.SENT, null, later));
+
+        List<NotificationLogEntity> latest = notificationLogRepository.findLatestPerOrder().stream()
+                .filter(log -> log.getOrderId().equals(3002L))
+                .toList();
+
+        assertThat(latest).hasSize(1);
+        assertThat(latest.get(0).getStatus()).isEqualTo(NotificationStatus.SENT);
+    }
 }

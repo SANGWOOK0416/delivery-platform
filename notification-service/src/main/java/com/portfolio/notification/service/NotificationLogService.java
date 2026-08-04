@@ -1,6 +1,7 @@
 package com.portfolio.notification.service;
 
 import com.portfolio.common.event.DeliveryRiskEvent;
+import com.portfolio.notification.dto.NotificationStatusResponse;
 import com.portfolio.notification.entity.NotificationLogEntity;
 import com.portfolio.notification.entity.NotificationStatus;
 import com.portfolio.notification.repository.NotificationLogRepository;
@@ -17,9 +18,10 @@ import org.springframework.stereotype.Service;
 public class NotificationLogService {
 
     private final NotificationLogRepository notificationLogRepository;
+    private final NotificationEventBroadcaster notificationEventBroadcaster;
 
     public void recordSuccess(DeliveryRiskEvent event) {
-        notificationLogRepository.save(new NotificationLogEntity(
+        NotificationLogEntity saved = notificationLogRepository.save(new NotificationLogEntity(
                 null,
                 event.orderId(),
                 event.address(),
@@ -28,10 +30,11 @@ public class NotificationLogService {
                 null,
                 Instant.now()
         ));
+        notificationEventBroadcaster.broadcastStatusChange(NotificationStatusResponse.from(saved));
     }
 
     public void recordFailure(DeliveryRiskEvent event, String failureReason) {
-        notificationLogRepository.save(new NotificationLogEntity(
+        NotificationLogEntity saved = notificationLogRepository.save(new NotificationLogEntity(
                 null,
                 event.orderId(),
                 event.address(),
@@ -40,5 +43,6 @@ public class NotificationLogService {
                 failureReason,
                 Instant.now()
         ));
+        notificationEventBroadcaster.broadcastStatusChange(NotificationStatusResponse.from(saved));
     }
 }
