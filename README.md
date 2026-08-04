@@ -14,6 +14,17 @@ Order Service --order-events--> Weather Agent --delivery-risk-events--> Notifica
 
 `KAKAO_API_TOKEN` is required only when the notification service sends real Kakao messages. `KMA_SERVICE_KEY` is required only when weather-agent should look up live weather from the KMA 초단기실황(getUltraSrtNcst) API; without it, weather-agent falls back to a no-precipitation default. `KAKAO_REST_API_KEY` (a separate value from `KAKAO_API_TOKEN` — the app's REST API key, not a user OAuth token) lets weather-agent geocode the order's delivery address to a KMA grid cell via the Kakao Local API; without it, weather-agent falls back to a fixed grid coordinate (`KMA_GRID_NX`/`KMA_GRID_NY`, defaulting to a Seoul reference point). Never commit API keys, tokens, heap dumps, or local `.env` files.
 
+## Dashboard (frontend)
+
+`frontend/` is a React + TypeScript (Vite) dashboard: order list with live delivery risk/notification status, and a form to submit new orders. It talks to order-service and notification-service directly (no BFF/gateway) — each service owns a small read API plus an SSE stream for the events it originates:
+
+- order-service: `GET /api/orders` (list), `GET /api/orders/stream` (SSE `order-created`, pushed the moment an order is saved)
+- notification-service: `GET /api/notifications/latest` (latest attempt per order), `GET /api/notifications/stream` (SSE `notification-status-changed`, pushed the moment an outcome is recorded)
+
+The frontend joins the two REST responses and merges both SSE streams client-side by `orderId`. Both services need `FRONTEND_ORIGIN` set (defaults to `http://localhost:5173`) for CORS.
+
+Run it with `cd frontend && npm install && npm run dev`.
+
 ## Event contracts
 
 Event payloads and topic names live in `common-module`. This keeps Kafka producers and consumers on the same schema and avoids fragile `Map<String, Object>` parsing.

@@ -1,0 +1,56 @@
+.app {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.order-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.order-form h2 {
+  flex-basis: 100%;
+  margin: 0 0 0.5rem;
+}
+
+.order-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+.order-form input {
+  padding: 0.4rem 0.6rem;
+}
+
+.order-form button {
+  padding: 0.5rem 1rem;
+}
+
+.order-list {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.order-list th,
+.order-list td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.order-list tr.row-failed {
+  background: var(--danger-bg);
+}
+
+.error {
+  color: #d33;
+}
