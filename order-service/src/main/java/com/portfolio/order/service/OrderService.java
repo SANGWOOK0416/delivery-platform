@@ -15,19 +15,21 @@ import org.springframework.stereotype.Service;
  * publish fails after a successful save, the order is still durably recorded and recoverable —
  * the reverse ordering would risk an event firing for an order with no permanent record at all.
  * This is not fully atomic (no transactional outbox) — see README "알려진 한계".
+ *
+ * The order id comes from the database's identity column, not an in-memory counter, so it
+ * stays unique across restarts — the id is only known once the save has actually happened.
  */
 @Service
 @RequiredArgsConstructor
 public class OrderService {
 
-    private final OrderIdGenerator orderIdGenerator;
     private final OrderRepository orderRepository;
     private final OrderProducer orderProducer;
 
     public Long createOrder(OrderRequest request) {
-        Long orderId = orderIdGenerator.nextId();
-
-        orderRepository.save(new OrderEntity(orderId, request.customerId(), request.address(), Instant.now()));
+        OrderEntity savedOrder = orderRepository.save(
+                new OrderEntity(null, request.customerId(), request.address(), Instant.now()));
+        Long orderId = savedOrder.getId();
 
         OrderCreatedEvent event = new OrderCreatedEvent(orderId, request.customerId(), request.address());
         orderProducer.sendOrderCreatedEvent(event);

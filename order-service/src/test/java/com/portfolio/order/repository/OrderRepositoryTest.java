@@ -25,11 +25,13 @@ class OrderRepositoryTest {
     private OrderRepository orderRepository;
 
     @Test
-    void persistsAndReloadsAnOrder() {
+    void assignsAnIdOnSaveAndReloadsTheOrder() {
         Instant now = Instant.now();
-        orderRepository.save(new OrderEntity(2001L, 55L, "Seoul, Mapo-gu", now));
+        OrderEntity saved = orderRepository.save(new OrderEntity(null, 55L, "Seoul, Mapo-gu", now));
 
-        Optional<OrderEntity> found = orderRepository.findById(2001L);
+        assertThat(saved.getId()).isNotNull();
+
+        Optional<OrderEntity> found = orderRepository.findById(saved.getId());
 
         assertThat(found).isPresent();
         assertThat(found.get().getCustomerId()).isEqualTo(55L);
