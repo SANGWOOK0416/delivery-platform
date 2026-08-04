@@ -2,6 +2,7 @@ package com.portfolio.order.service;
 
 import com.portfolio.common.event.OrderCreatedEvent;
 import com.portfolio.order.dto.OrderRequest;
+import com.portfolio.order.dto.OrderResponse;
 import com.portfolio.order.entity.OrderEntity;
 import com.portfolio.order.producer.OrderProducer;
 import com.portfolio.order.repository.OrderRepository;
@@ -25,6 +26,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final OrderProducer orderProducer;
+    private final OrderEventBroadcaster orderEventBroadcaster;
 
     public Long createOrder(OrderRequest request) {
         OrderEntity savedOrder = orderRepository.save(
@@ -33,6 +35,8 @@ public class OrderService {
 
         OrderCreatedEvent event = new OrderCreatedEvent(orderId, request.customerId(), request.address());
         orderProducer.sendOrderCreatedEvent(event);
+
+        orderEventBroadcaster.broadcastNewOrder(OrderResponse.from(savedOrder));
 
         return orderId;
     }

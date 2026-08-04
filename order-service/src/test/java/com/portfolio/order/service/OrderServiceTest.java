@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.portfolio.common.event.OrderCreatedEvent;
 import com.portfolio.order.dto.OrderRequest;
+import com.portfolio.order.dto.OrderResponse;
 import com.portfolio.order.entity.OrderEntity;
 import com.portfolio.order.producer.OrderProducer;
 import com.portfolio.order.repository.OrderRepository;
@@ -21,7 +22,8 @@ class OrderServiceTest {
 
     private final OrderRepository orderRepository = Mockito.mock(OrderRepository.class);
     private final OrderProducer orderProducer = Mockito.mock(OrderProducer.class);
-    private final OrderService orderService = new OrderService(orderRepository, orderProducer);
+    private final OrderEventBroadcaster orderEventBroadcaster = Mockito.mock(OrderEventBroadcaster.class);
+    private final OrderService orderService = new OrderService(orderRepository, orderProducer, orderEventBroadcaster);
 
     @Test
     void publishesTheEventWithTheIdAssignedByTheDatabaseSave() {
@@ -46,6 +48,8 @@ class OrderServiceTest {
         ArgumentCaptor<OrderCreatedEvent> eventCaptor = ArgumentCaptor.forClass(OrderCreatedEvent.class);
         verify(orderProducer).sendOrderCreatedEvent(eventCaptor.capture());
         assertThat(eventCaptor.getValue()).isEqualTo(new OrderCreatedEvent(1001L, 10L, "Seoul, Jongno-gu"));
+
+        verify(orderEventBroadcaster).broadcastNewOrder(OrderResponse.from(savedOrder));
     }
 
     @Test
@@ -56,5 +60,6 @@ class OrderServiceTest {
                 .isInstanceOf(RuntimeException.class);
 
         Mockito.verifyNoInteractions(orderProducer);
+        Mockito.verifyNoInteractions(orderEventBroadcaster);
     }
 }
