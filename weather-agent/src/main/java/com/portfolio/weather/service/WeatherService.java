@@ -35,7 +35,10 @@ public class WeatherService {
     private KmaApiProperties.Grid resolveGrid(String address) {
         try {
             GeoCoordinate coordinate = kakaoGeocodingClient.geocode(address);
-            return kmaGridConverter.toGrid(coordinate.latitude(), coordinate.longitude());
+            KmaApiProperties.Grid grid = kmaGridConverter.toGrid(coordinate.latitude(), coordinate.longitude());
+            log.info("Resolved delivery address to a KMA grid cell. address={}, nx={}, ny={}",
+                    address, grid.nx(), grid.ny());
+            return grid;
         } catch (GeocodingException exception) {
             log.warn("Failed to geocode delivery address; falling back to default grid coordinate. address={}, reason={}",
                     address, exception.getMessage());
