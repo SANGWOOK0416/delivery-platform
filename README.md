@@ -167,6 +167,10 @@ Kafka consumer lag을 2~3초 간격으로 폴링해 시계열로 남겼다(`load
 
 실측 결과, lag는 **5 req/s에서는 0~2건으로 안정**, **10 req/s부터 꾸준히 증가**해 100 req/s 도달 시 최대 **6,938건**까지 쌓였다 — 예상한 ~7 req/s 근방에서 정확히 변곡점이 나타났다. 부하 종료 후 신규 유입 없이 이 backlog를 소진하는 데 20분 44초가 걸렸고, 이를 역산한 실측 처리량은 **약 5.6 req/s**로 이론치보다 다소 낮았다 (JSON 역직렬화, Kafka poll, DB insert 등 시뮬레이션에 포함하지 않은 실제 오버헤드 때문으로 추정). notification-service는 이 흐름에 종속적으로만 메시지를 받기 때문에 lag가 항상 두 자릿수 이하였다 — 병목은 명확히 weather-agent 한 곳이었다.
 
+![Kafka consumer lag 시계열: 5→10→20→50→100 req/s 램프 구간에서 weather-agent(order-events) lag의 변곡점과 이후 drain, soak 안정 구간](loadtest/results/lag_timeline.png)
+
+*(빨강: weather-agent가 소비하는 `order-events`, 파랑: notification-service가 소비하는 `delivery-risk-events`. 원본 시계열은 `loadtest/results/lag_scenario_a.csv`, 그래프 생성 스크립트는 `loadtest/scripts/plot_lag.py`.)*
+
 ### 트러블슈팅: 파티션 1개로 인한 Head-of-Line Blocking
 
 - **증상**: 재시도/DLQ 경로를 실제로 확인하려고 notification-service를 `loadtest.kakao.failure-rate=0.7`(70%)로 재기동해서 5 req/s로 단 2분(600건)만 짧게 부었다. 부하 자체는 2분 만에 끝났는데, notification-group의 consumer lag가 실제로 0으로 돌아오기까지는 **약 28분**이 걸렸다(부하 종료 시점 lag 피크 548건 기준). 같은 시간 동안 weather-group(order-events) lag는 계속 0~2건으로 평온했다 — 실패를 주입하지 않은 쪽은 전혀 영향을 받지 않았다는 뜻이다.
