@@ -1,0 +1,6 @@
+# order-service calls no external API, so there is nothing to stub here — this profile only
+# tunes logging so log I/O doesn't become the bottleneck at load-test throughput.
+logging:
+  level:
+    root: WARN
+    com.portfolio: INFO

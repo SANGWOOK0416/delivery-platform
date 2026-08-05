@@ -1,0 +1,21 @@
+# Load-test profile: swaps in StubKakaoMessageSender (see @Profile("loadtest") on that class and
+# on the real KakaoMessageService) so no request ever reaches the real Kakao Talk API.
+#
+# kakao.api.token still needs a non-blank value: KakaoApiProperties' @NotBlank validation runs
+# regardless of which KakaoMessageSender implementation is wired in, so this is a fixed dummy
+# value, not a real token — StubKakaoMessageSender never reads it.
+kakao:
+  api:
+    token: loadtest-dummy-token
+    web-url: https://example.com
+
+loadtest:
+  kakao:
+    # Fraction of simulated sends that fail (0.0-1.0), to exercise the retry/DLQ path under load.
+    failure-rate: 0.05
+    simulated-latency-ms: 100
+
+logging:
+  level:
+    root: WARN
+    com.portfolio: INFO

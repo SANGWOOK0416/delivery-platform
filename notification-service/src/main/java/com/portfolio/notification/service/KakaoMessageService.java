@@ -7,6 +7,7 @@ import com.portfolio.notification.config.KakaoApiProperties;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -18,8 +19,9 @@ import org.springframework.web.client.RestTemplate;
 
 @Slf4j
 @Service
+@Profile("!loadtest")
 @RequiredArgsConstructor
-public class KakaoMessageService {
+public class KakaoMessageService implements KakaoMessageSender {
 
     private static final String KAKAO_MEMO_URL = "https://kapi.kakao.com/v2/api/talk/memo/default/send";
 
@@ -27,6 +29,7 @@ public class KakaoMessageService {
     private final ObjectMapper objectMapper;
     private final KakaoApiProperties kakaoApiProperties;
 
+    @Override
     public void sendDeliveryAlert(DeliveryRiskEvent event) {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(kakaoApiProperties.token());

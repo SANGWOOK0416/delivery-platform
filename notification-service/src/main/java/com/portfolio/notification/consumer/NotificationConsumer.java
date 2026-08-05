@@ -2,7 +2,7 @@ package com.portfolio.notification.consumer;
 
 import com.portfolio.common.event.DeliveryRiskEvent;
 import com.portfolio.common.event.KafkaTopics;
-import com.portfolio.notification.service.KakaoMessageService;
+import com.portfolio.notification.service.KakaoMessageSender;
 import com.portfolio.notification.service.NotificationLogService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -14,13 +14,13 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class NotificationConsumer {
 
-    private final KakaoMessageService kakaoMessageService;
+    private final KakaoMessageSender kakaoMessageSender;
     private final NotificationLogService notificationLogService;
 
     @KafkaListener(topics = KafkaTopics.DELIVERY_RISK_EVENTS, groupId = "${spring.kafka.consumer.group-id}")
     public void consumeDeliveryRiskEvent(DeliveryRiskEvent event) {
         try {
-            kakaoMessageService.sendDeliveryAlert(event);
+            kakaoMessageSender.sendDeliveryAlert(event);
         } catch (RuntimeException exception) {
             notificationLogService.recordFailure(event, exception.getMessage());
             throw exception;
