@@ -2,11 +2,11 @@ package com.portfolio.weather.service;
 
 import com.portfolio.common.event.DeliveryRiskEvent;
 import com.portfolio.common.event.OrderCreatedEvent;
+import com.portfolio.weather.client.GeoCoordinate;
+import com.portfolio.weather.client.GeocodingClient;
 import com.portfolio.weather.client.GeocodingException;
-import com.portfolio.weather.client.KakaoGeocodingClient;
-import com.portfolio.weather.client.KakaoGeocodingClient.GeoCoordinate;
 import com.portfolio.weather.client.KmaGridConverter;
-import com.portfolio.weather.client.KmaWeatherClient;
+import com.portfolio.weather.client.WeatherApiClient;
 import com.portfolio.weather.config.KmaApiProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,14 +17,14 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class WeatherService {
 
-    private final KakaoGeocodingClient kakaoGeocodingClient;
+    private final GeocodingClient geocodingClient;
     private final KmaGridConverter kmaGridConverter;
-    private final KmaWeatherClient kmaWeatherClient;
+    private final WeatherApiClient weatherApiClient;
     private final KmaApiProperties kmaApiProperties;
 
     public DeliveryRiskEvent analyzeDeliveryRisk(OrderCreatedEvent orderEvent) {
         KmaApiProperties.Grid grid = resolveGrid(orderEvent.address());
-        int precipitationType = kmaWeatherClient.fetchCurrentPrecipitationType(grid.nx(), grid.ny());
+        int precipitationType = weatherApiClient.fetchCurrentPrecipitationType(grid.nx(), grid.ny());
         return new DeliveryRiskEvent(
                 orderEvent.orderId(),
                 orderEvent.address(),
@@ -34,7 +34,7 @@ public class WeatherService {
 
     private KmaApiProperties.Grid resolveGrid(String address) {
         try {
-            GeoCoordinate coordinate = kakaoGeocodingClient.geocode(address);
+            GeoCoordinate coordinate = geocodingClient.geocode(address);
             KmaApiProperties.Grid grid = kmaGridConverter.toGrid(coordinate.latitude(), coordinate.longitude());
             log.info("Resolved delivery address to a KMA grid cell. address={}, nx={}, ny={}",
                     address, grid.nx(), grid.ny());

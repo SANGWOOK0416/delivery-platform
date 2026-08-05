@@ -41,7 +41,7 @@ class KakaoGeocodingClientTest {
                 Mockito.eq(KakaoAddressSearchResponse.class)))
                 .thenReturn(ResponseEntity.ok(response));
 
-        KakaoGeocodingClient.GeoCoordinate coordinate = client.geocode("서울시 중구 세종대로 110");
+        GeoCoordinate coordinate = client.geocode("서울시 중구 세종대로 110");
 
         assertThat(coordinate.latitude()).isEqualTo(37.5665);
         assertThat(coordinate.longitude()).isEqualTo(126.9780);

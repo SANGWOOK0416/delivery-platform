@@ -3,6 +3,7 @@ package com.portfolio.weather.client;
 import com.portfolio.weather.config.KakaoLocalApiProperties;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -17,14 +18,16 @@ import org.springframework.web.util.UriComponentsBuilder;
  * per-user OAuth access token that notification-service uses for message sends.
  */
 @Component
+@Profile("!loadtest")
 @RequiredArgsConstructor
-public class KakaoGeocodingClient {
+public class KakaoGeocodingClient implements GeocodingClient {
 
     private static final String AUTH_HEADER_PREFIX = "KakaoAK ";
 
     private final RestTemplate restTemplate;
     private final KakaoLocalApiProperties kakaoLocalApiProperties;
 
+    @Override
     public GeoCoordinate geocode(String address) {
         if (!kakaoLocalApiProperties.hasRestApiKey()) {
             throw new GeocodingException("KAKAO_REST_API_KEY가 설정되지 않았습니다.");
@@ -60,8 +63,5 @@ public class KakaoGeocodingClient {
         } catch (NumberFormatException exception) {
             throw new GeocodingException("주소 검색 응답의 좌표를 파싱할 수 없습니다.", exception);
         }
-    }
-
-    public record GeoCoordinate(double latitude, double longitude) {
     }
 }

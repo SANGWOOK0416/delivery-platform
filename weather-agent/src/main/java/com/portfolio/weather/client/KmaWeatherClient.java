@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -16,8 +17,9 @@ import org.springframework.web.util.UriComponentsBuilder;
  */
 @Slf4j
 @Component
+@Profile("!loadtest")
 @RequiredArgsConstructor
-public class KmaWeatherClient {
+public class KmaWeatherClient implements WeatherApiClient {
 
     private static final DateTimeFormatter BASE_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final DateTimeFormatter BASE_TIME_FORMAT = DateTimeFormatter.ofPattern("HHmm");
@@ -29,6 +31,7 @@ public class KmaWeatherClient {
     private final RestTemplate restTemplate;
     private final KmaApiProperties kmaApiProperties;
 
+    @Override
     public int fetchCurrentPrecipitationType(int nx, int ny) {
         if (!kmaApiProperties.hasServiceKey()) {
             log.warn("KMA_SERVICE_KEY is not configured; skipping live weather lookup.");

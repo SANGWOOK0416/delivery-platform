@@ -1,0 +1,23 @@
+# Load-test profile: swaps in StubGeocodingClient / StubWeatherApiClient (see @Profile("loadtest")
+# on those classes) so no request ever reaches the real Kakao Local API or KMA API. The real
+# clients (KakaoGeocodingClient / KmaWeatherClient) are excluded from the context entirely under
+# this profile, so kma.api.service-key / kakao.local.rest-api-key below are never even read —
+# left blank here anyway so the intent (never call the real API from a load test) is explicit.
+kma:
+  api:
+    service-key: ""
+
+kakao:
+  local:
+    rest-api-key: ""
+
+loadtest:
+  geocoding:
+    simulated-latency-ms: 60
+  weather:
+    simulated-latency-ms: 80
+
+logging:
+  level:
+    root: WARN
+    com.portfolio: INFO
