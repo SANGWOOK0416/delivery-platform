@@ -147,6 +147,45 @@ order-service persists each accepted order (`orders` table) and notification-ser
 - **No transactional outbox.** order-service saves the order to Postgres and then publishes `OrderCreatedEvent` to Kafka as two separate steps, not one atomic operation. If the process crashes between the two, the order exists in the database but the event never fires. A full fix needs an outbox table plus a poller/CDC process (e.g. Debezium) publishing from it — deliberately left out of this pass to keep scope bounded.
 - **order-service's Kafka publish is still fire-and-forget.** `OrderProducer.sendOrderCreatedEvent` does not wait for the broker acknowledgment before the API returns 202, so a publish failure after a successful DB save is not reflected in the HTTP response. (weather-agent's equivalent publish to `delivery-risk-events` was already made synchronous with a timeout — see `DeliveryRiskProducer` — as part of the DLQ work; the same treatment for order-service was deferred to avoid changing the order API's response latency/contract without a separate decision.)
 
+## 부하테스트
+
+`loadtest/` 디렉터리에 k6 스크립트와 결과가 있다. 카카오/기상청 실제 API를 호출하지 않도록 `loadtest` Spring 프로파일로 stub을 붙여서(각 서비스의 `application-loadtest.yml`), 외부 API 지연이 섞이지 않은 순수한 이 시스템 자체의 처리 능력과 장애 복구 동작만 측정했다.
+
+### 방법론
+
+k6로 스모크(정상성 확인) → 램프(한계 탐색) → 소크(지속 안정성 확인) 3단계로 진행했고, 별도로 실패율을 인위적으로 높인 짧은 회차를 추가해 DLQ 유입까지 직접 관찰했다.
+
+| 단계 | 부하 | 결과 |
+|---|---|---|
+| Smoke | 5 req/s × 30초 | 146건, 실패율 0%. p95=1.98s는 커넥션풀/JIT 워밍업 콜드스타트 때문(median 29.6ms는 정상) |
+| Ramp | 5→10→20→50→100 req/s, 단계당 1분 | 8,228건, HTTP 실패율 0% — order-service는 DB 저장 + Kafka publish 후 바로 응답하므로 다운스트림 지연과 무관하게 항상 빠르다 |
+| Soak | 4 req/s × 10분 | 2,401건, 실패율 0%, p95=57.6ms — 안정 상태 |
+
+### weather-agent 병목 확인
+
+Kafka consumer lag을 2~3초 간격으로 폴링해 시계열로 남겼다(`loadtest/results/lag_scenario_a.csv`). weather-agent는 지오코딩(시뮬레이션 60ms) + 기상 조회(시뮬레이션 80ms)를 순차 호출하므로 이론적 처리 상한을 1000ms / 140ms ≈ **7.14 req/s**로 예상했다.
+
+실측 결과, lag는 **5 req/s에서는 0~2건으로 안정**, **10 req/s부터 꾸준히 증가**해 100 req/s 도달 시 최대 **6,938건**까지 쌓였다 — 예상한 ~7 req/s 근방에서 정확히 변곡점이 나타났다. 부하 종료 후 신규 유입 없이 이 backlog를 소진하는 데 20분 44초가 걸렸고, 이를 역산한 실측 처리량은 **약 5.6 req/s**로 이론치보다 다소 낮았다 (JSON 역직렬화, Kafka poll, DB insert 등 시뮬레이션에 포함하지 않은 실제 오버헤드 때문으로 추정). notification-service는 이 흐름에 종속적으로만 메시지를 받기 때문에 lag가 항상 두 자릿수 이하였다 — 병목은 명확히 weather-agent 한 곳이었다.
+
+### 트러블슈팅: 파티션 1개로 인한 Head-of-Line Blocking
+
+- **증상**: 재시도/DLQ 경로를 실제로 확인하려고 notification-service를 `loadtest.kakao.failure-rate=0.7`(70%)로 재기동해서 5 req/s로 단 2분(600건)만 짧게 부었다. 부하 자체는 2분 만에 끝났는데, notification-group의 consumer lag가 실제로 0으로 돌아오기까지는 **약 28분**이 걸렸다(부하 종료 시점 lag 피크 548건 기준). 같은 시간 동안 weather-group(order-events) lag는 계속 0~2건으로 평온했다 — 실패를 주입하지 않은 쪽은 전혀 영향을 받지 않았다는 뜻이다.
+- **원인**: `delivery-risk-events` 토픽도 파티션이 1개라 컨슈머 동시성이 1로 고정된다. 지수 백오프(500ms → 1s → 2s → 4s, 최대 4회 재시도)로 DLQ까지 가는 메시지 하나가 최대 7.5초를 잡아먹는데, 파티션이 1개뿐이라 그 뒤에 대기 중인 **다른 정상 메시지까지 전부 순서대로 막힌다**. 이번 회차에서 600건 중 100건(16.6%)이 실제로 DLQ까지 갔으니, 이 100건만으로도 순수 백오프 대기 시간이 100 × 7.5s = 750초(12.5분)이고, 여기에 1~4회 만에 성공한 나머지 메시지들의 재시도 대기까지 겹쳐 총 회복 시간이 28분까지 늘어난 것으로 보인다.
+- **실측 vs 이론**: 순진하게 생각하면 "2분짜리 버스트니까 금방 끝나겠지"라고 예상하기 쉽지만, 재시도 정책과 파티션 동시성이 상호작용하면서 실제 영향 범위는 부하 지속 시간의 약 14배(2분 → 28분)로 늘어났다. 짧은 실패 스파이크의 blast radius를 예측하려면 재시도 백오프 총량과 파티션 동시성을 함께 고려해야 한다는 걸 수치로 확인했다.
+- **향후 개선 과제**: `delivery-risk-events`(및 `order-events`) 파티션 수를 늘려 컨슈머 동시성을 확보하면 이 head-of-line blocking이 완화될 것으로 예상되지만, 이번 부하테스트 스코프에서는 실제로 파티션을 늘려 재검증하는 것까지는 하지 않았다. 파티션 증설 시에는 파티션 키 설계(현재는 키 없이 라운드로빈 분배)와 주문별 이벤트 순서 보장이 필요한지 여부도 함께 재검토해야 해서, 검증을 포함해 별도 작업으로 남겨둔다.
+
+### DLQ 유입 검증
+
+- **정상 실패율(5%)**: 8,866건 중 6건(0.07%)만 DLQ에 도달 — 재시도가 99.93%를 흡수했다.
+- **의도적으로 높인 실패율(70%)**: 600건 중 100건(16.6%)이 DLQ에 도달했다. 이론값 0.7⁵ ≈ 16.8%(5회 시도가 모두 실패할 확률)와 거의 정확히 일치해서, 재시도 설계가 예측 가능하게 동작한다는 걸 확인했다.
+
+### 산출물
+
+- `loadtest/k6/{smoke,ramp,soak,dlq-check}.js` — k6 시나리오
+- `loadtest/scripts/{poll-lag.sh,dlt-offsets.sh}` — consumer lag 시계열 수집, DLQ 오프셋 델타 측정
+- `loadtest/results/lag_scenario_a.csv`, `lag_scenario_b.csv` — consumer lag 시계열 원본 데이터
+- `loadtest/results/*_summary.json` — k6 자체 집계 통계
+
 ## 트러블슈팅
 
 개발하면서 실제로 겪고 고친 문제들이다. 전부 로그, DB 조회, 직접 API 호출로 재현·검증한 것들이고, 짐작만으로 넘어간 건 없다.
